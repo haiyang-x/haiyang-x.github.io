@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>agent bar</title>
+<style type="text/css">
+html,
+body{
+    min-height: 100%;
+    height: 100%;
+    margin: 0;
+}
+.agentbar{
+    width: 600px;
+    height: 50px;
+    position: relative;
+    top: 20px;
+    margin: 0 auto;
+}
+ul{
+    width: 570px;
+    font-size: 12px;
+    padding: 15px;
+    margin: 30px auto 0;
+    background: #f1f1f1;
+}
+li{
+    width: 49%;
+    margin-bottom: 10px;
+    list-style: none;
+}
+label{
+    display: inline-block;
+    width: 80px;
+    vertical-align: middle;
+}
+input, button{
+    padding: 10px;
+}
+</style>
+<!-- QiDianDA -->
+<script>
+(function(w, a, m){m='__qq_qidian_da';w[m]=a;w[a]=w[a]||function(){(w[a][m]=w[a][m]||[]).push(arguments);};})(window,'qidianDA');
+qidianDA('create', '2852151262', 'df1bd131c516197eae17a8a650b6bf79', {
+    mtaId: '500703119'
+});
+qidianDA('set', 't1', new Date());
+</script>
+<script async src="//bqq.gtimg.com/da/i.js"></script>
+<!-- End QiDianDA -->
+</head>
+<body>
+<div id="qd_agentbar" class="agentbar"></div>
+<ul>
+    <li style="float: right;">
+        <input id="tel" type="text" value="10010" />
+        <button id="setTel">设置拨打号码</button>
+    </li>
+    <li>
+        <label>登录的工号：</label><input id="kfext" type="text" value="3007024246" />
+    </li>
+    <li>
+        <label>appId：</label><input id="appId" type="text" value="201109674" />
+    </li>
+    <li>
+        <label>secret</label><input id="secret" type="text" value="XsLg64jOu2o0rE5j" />
+    </li>
+    <li>
+        <label>登录环境：</label><select id="env"><option value="oa">oa</option><option value="online">online</option><option value="gray">gray</option></select>
+    </li>
+    <li><button id="config">重新鉴权</button></li>
+</ul>
+
+<script type="text/javascript" src="/static/jquery-3.2.1.min.js"></script>
+<script type="text/javascript" src="/qd-agentbar.js"></script>
+<script type="text/javascript">
+let appId;
+let secret; // secret为测试页面使用，真实业务请不要直接暴露
+let kfext;
+let env;
+
+let socketUrl = {
+    oa: 'https://oaapi.qidian.qq.com',
+    gray: 'https://sandbox.qidian.qq.com',
+    online: 'https://api.qidian.qq.com'
+};
+
+function getAccount() {
+    appId = document.querySelector('#appId').value;
+    secret = document.querySelector('#secret').value; // secret为测试页面使用，真实业务请不要直接暴露
+    kfext = document.querySelector('#kfext').value;
+    env = document.querySelector('#env').value;
+}
+
+document.querySelector('#setTel').addEventListener('click', function() {
+    var tel = document.querySelector('#tel').value;
+    var frame = document.querySelector('#qd_agentbar').querySelector('iframe');
+    frame.contentWindow.document.querySelector('.number').value = tel;
+    frame.contentWindow.$('.call').removeClass('is-disable');
+});
+
+// 获取ticket
+var fetchTicket = function (refresh) {
+    return $.ajax({
+        url: '/demo_ticket/demo/index',
+        data: {
+            kfext: kfext,
+            appId: appId,
+            secret: secret,
+            env: env,
+            refresh: refresh ? 1 : 0
+        }
+    });
+};
+// 为了保障业务的可靠，业务里必须监听ticketExpired，获取有效ticket后执行goon自动继续上次动作
+// js_api_ticket过期，更新ticket后需要执行goon继续上次的动作
+qd.one('ticketExpired', function(){
+    console.log('to refresh ticket...');
+    // 这里需要做ticket续期动作
+    // 续期完成后调用goon接口继续上次被中断的动作
+    fetchTicket(true).done(cb);
+
+    function cb(res) {
+        qd.goon({
+          ticket: res.ticket
+        });
+    }
+});
+
+function config() {
+    getAccount();
+    fetchTicket().done(function(res) {
+        qd.config({
+            appId: appId, // 必填，应用唯一标识
+            kfext: kfext, // 必填，本次登录对应企点的工号
+            ticket: res.ticket, // 必填，js_api_ticket
+            // socketUrl: 'http://localhost:8088',
+            socketUrl: socketUrl[env],
+            debug: true,
+            success: function(res) {
+                console.log('configed success');
+            },
+            fail: function(err) {
+                fetchTicket(true);
+                console.log('configed fail');
+            }
+        });
+    });
+}
+
+config();
+
+document.querySelector('#config').addEventListener('click', () => {
+    qd.reset();
+    config();
+});
+
+</script>
+<!-- QiDianDA -->
+<script>
+(function(w, a, m){m='__qq_qidian_da';w[m]=a;w[a]=w[a]||function(){(w[a][m]=w[a][m]||[]).push(arguments);};})(window,'qidianDA');
+qidianDA('create', '2852151262', 'df1bd131c516197eae17a8a650b6bf79', {
+    mtaId: '500703119'
+});
+qidianDA('set', 't1', new Date());
+</script>
+<script async src="//bqq.gtimg.com/da/i.js"></script>
+<!-- End QiDianDA -->
+</body>
+</html>
